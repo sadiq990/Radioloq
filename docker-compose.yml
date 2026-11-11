@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: radioloq_db
+    environment:
+      POSTGRES_USER: radioloq
+      POSTGRES_PASSWORD: radioloq_secret
+      POSTGRES_DB: radioloq
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U radioloq"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  orthanc:
+    image: orthancteam/orthanc:latest
+    container_name: radioloq_orthanc
+    ports:
+      - "8042:8042"
+      - "4242:4242"
+    volumes:
+      - orthanc_data:/var/lib/orthanc/db
+      - ./infra/orthanc.json:/etc/orthanc/orthanc.json:ro
+    environment:
+      VERBOSE_ENABLED: "true"
+
+volumes:
+  postgres_data:
+  orthanc_data:

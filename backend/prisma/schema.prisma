@@ -1,0 +1,227 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  DOCTOR
+  PATIENT
+  CLINIC_ADMIN
+  SUPER_ADMIN
+}
+
+enum ConsultationStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  DELIVERED
+  CANCELLED
+}
+
+enum ReportStatus {
+  DRAFT
+  FINAL
+  ARCHIVED
+}
+
+enum UrgencyLevel {
+  ROUTINE
+  URGENT
+  STAT
+}
+
+enum BridgeStatus {
+  CONNECTED
+  DISCONNECTED
+  SYNCING
+  ERROR
+}
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  passwordHash    String
+  role            UserRole  @default(PATIENT)
+  firstName       String
+  lastName        String
+  specialty       String?
+  phone           String?
+  bio             String?
+  avatarUrl       String?
+  isVerified      Boolean   @default(false)
+  isActive        Boolean   @default(true)
+  clinicId        String?
+  clinic          Clinic?   @relation(fields: [clinicId], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  studies                Study[]       @relation("UploadedStudies")
+  doctorConsultations    Consultation[] @relation("DoctorConsultations")
+  patientConsultations   Consultation[] @relation("PatientConsultations")
+  reports                Report[]
+  messages               Message[]
+  templates              Template[]
+  refreshTokens          RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@map("refresh_tokens")
+}
+
+model Clinic {
+  id            String   @id @default(uuid())
+  name          String
+  address       String?
+  phone         String?
+  email         String?
+  logoUrl       String?
+  letterheadUrl String?
+  website       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  users         User[]
+  bridgeConn    BridgeConnection?
+
+  @@map("clinics")
+}
+
+model Study {
+  id           String    @id @default(uuid())
+  studyUid     String    @unique
+  patientName  String?
+  patientId    String?
+  description  String?
+  modality     String?
+  studyDate    DateTime?
+  orthancId    String?
+  storagePath  String?
+  uploadedById String
+  uploadedBy   User      @relation("UploadedStudies", fields: [uploadedById], references: [id])
+  createdAt    DateTime  @default(now())
+
+  series        Series[]
+  consultations Consultation[]
+
+  @@map("studies")
+}
+
+model Series {
+  id           String  @id @default(uuid())
+  studyId      String
+  study        Study   @relation(fields: [studyId], references: [id], onDelete: Cascade)
+  seriesUid    String
+  description  String?
+  modality     String?
+  numInstances Int     @default(0)
+  orthancId    String?
+  thumbnailUrl String?
+
+  @@map("series")
+}
+
+model Consultation {
+  id               String             @id @default(uuid())
+  patientId        String
+  patient          User               @relation("PatientConsultations", fields: [patientId], references: [id])
+  doctorId         String?
+  doctor           User?              @relation("DoctorConsultations", fields: [doctorId], references: [id])
+  studyId          String?
+  study            Study?             @relation(fields: [studyId], references: [id])
+  clinicalQuestion String?
+  urgency          UrgencyLevel       @default(ROUTINE)
+  status           ConsultationStatus @default(PENDING)
+  notes            String?
+  createdAt        DateTime           @default(now())
+  completedAt      DateTime?
+  updatedAt        DateTime           @updatedAt
+
+  messages Message[]
+  reports  Report[]
+
+  @@map("consultations")
+}
+
+model Report {
+  id              String        @id @default(uuid())
+  consultationId  String?
+  consultation    Consultation? @relation(fields: [consultationId], references: [id])
+  doctorId        String
+  doctor          User          @relation(fields: [doctorId], references: [id])
+  templateId      String?
+  template        Template?     @relation(fields: [templateId], references: [id])
+  title           String        @default("Radiology Report")
+  clinicalHistory String?
+  technique       String?
+  findings        String?
+  impression      String?
+  recommendation  String?
+  status          ReportStatus  @default(DRAFT)
+  pdfUrl          String?
+  docxUrl         String?
+  version         Int           @default(1)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@map("reports")
+}
+
+model Template {
+  id          String   @id @default(uuid())
+  name        String
+  modality    String?
+  bodyPart    String?
+  description String?
+  content     Json
+  isGlobal    Boolean  @default(false)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  reports Report[]
+
+  @@map("templates")
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  consultationId String
+  consultation   Consultation @relation(fields: [consultationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation(fields: [senderId], references: [id])
+  content        String
+  createdAt      DateTime     @default(now())
+
+  @@map("messages")
+}
+
+model BridgeConnection {
+  id            String       @id @default(uuid())
+  clinicId      String       @unique
+  clinic        Clinic       @relation(fields: [clinicId], references: [id])
+  aeTitleLocal  String       @default("RADIOLOQ")
+  pacsHost      String?
+  pacsPort      Int          @default(4242)
+  status        BridgeStatus @default(DISCONNECTED)
+  lastSync      DateTime?
+  studiesSynced Int          @default(0)
+  errorLog      String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@map("bridge_connections")
+}

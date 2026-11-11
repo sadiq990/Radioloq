@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-ssr/
+.env
+*.local
+*.log
+.DS_Store
+backend/uploads/audio/*
+backend/uploads/dicom/*
+!backend/uploads/audio/.gitkeep
+!backend/uploads/dicom/.gitkeep

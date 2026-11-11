@@ -1,0 +1,21 @@
+{
+  "Name": "Radioloq Orthanc",
+  "StorageDirectory": "/var/lib/orthanc/db",
+  "IndexDirectory": "/var/lib/orthanc/db",
+  "HttpServerEnabled": true,
+  "HttpPort": 8042,
+  "DicomServerEnabled": true,
+  "DicomPort": 4242,
+  "DicomAet": "RADIOLOQ",
+  "DicomCheckCalledAet": false,
+  "AuthenticationEnabled": false,
+  "RemoteAccessAllowed": true,
+  "HttpCompressionEnabled": true,
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "WadoRoot": "/wado",
+    "Ssl": false
+  }
+}
